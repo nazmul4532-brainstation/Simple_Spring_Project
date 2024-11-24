@@ -25,7 +25,7 @@ spec:
         command: [sh, -c]
         args:
           - |
-            git clone https://github.com/username/repository.git /workspace/repository
+            git clone https://github.com/nazmul4532-brainstation/Simple_Spring_Project.git /workspace/repository
         volumeMounts:
           - name: workspace
             mountPath: /workspace
@@ -55,12 +55,12 @@ spec:
             valueFrom:
               secretKeyRef:
                 name: docker-registry-secret
-                key: username
+                key: admin
           - name: DOCKER_PASS
             valueFrom:
               secretKeyRef:
                 name: docker-registry-secret
-                key: password
+                key: fintech@bs23
 
     - name: deploy
       container:

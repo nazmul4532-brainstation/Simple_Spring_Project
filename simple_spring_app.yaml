@@ -32,7 +32,7 @@ spec:
     spec:
       containers:
         - name: spring-boot-demo
-          image: nazmul4532brainstation/spring-boot-demo:latest
+          image: harbor.devbsfintech23.com/test-discovery/simple-spring:test
           ports:
             - containerPort: 8080
           volumeMounts:  # Mount the PVC here
