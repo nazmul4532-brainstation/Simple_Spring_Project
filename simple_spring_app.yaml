@@ -9,7 +9,7 @@ spec:
   resources:
     requests:
       storage: 1Gi  # Specify the storage size
-  storageClassName: rook-cephfs  # Use the cephfs storage class
+  storageClassName: standard  # Use the cephfs storage class
 
 ---
 apiVersion: apps/v1
