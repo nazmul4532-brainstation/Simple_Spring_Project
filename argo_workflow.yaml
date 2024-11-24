@@ -4,20 +4,31 @@ metadata:
   generateName: stateless-ci-cd-pipeline-
 spec:
   entrypoint: pipeline
-  volumes:
-    - name: workspace
-      emptyDir: {}  # Ephemeral storage for the workflow
+  volumeClaimTemplates:
+    - metadata:
+        name: workspace-pvc
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+        storageClassName: standard  # Assuming Delete reclaim policy
+        persistentVolumeReclaimPolicy: Delete
   templates:
     - name: pipeline
       steps:
         - - name: clone-repo
             template: git-clone
+        - - name: debug
+            template: debug
         - - name: build-docker-image
             template: build-image
-        - - name: push-docker-image
-            template: push-image
+        # - - name: push-docker-image
+        #     template: push-image
         - - name: deploy-app
             template: deploy
+        # - - name: delete-pvc
+        #     template: delete-pvc
 
     - name: git-clone
       container:
@@ -25,42 +36,110 @@ spec:
         command: [sh, -c]
         args:
           - |
-            git clone https://github.com/nazmul4532-brainstation/Simple_Spring_Project.git /workspace/repository
+            git clone https://github.com/nazmul4532-brainstation/Simple_Spring_Project.git /workspace/Simple_Spring_Project
         volumeMounts:
-          - name: workspace
+          - name: workspace-pvc
+            mountPath: /workspace
+
+    - name: debug
+      container:
+        image: alpine:latest
+        command: [sh, -c]
+        args:
+          - |
+            echo "Listing workspace directory:"
+            ls -la /workspace
+            echo "Listing Simple_Spring_Project directory:"
+            ls -la /workspace/Simple_Spring_Project
+        volumeMounts:
+          - name: workspace-pvc
             mountPath: /workspace
 
     - name: build-image
       container:
-        image: docker:latest
+        image: docker:19.03-dind
+        securityContext:
+          privileged: true
         command: [sh, -c]
         args:
           - |
-            cd /workspace/repository/spring-project
+            echo "Creating /etc/docker/daemon.json..."
+            mkdir -p /etc/docker
+            echo '{
+                "insecure-registries" : [ "harbor.devbsfintech23.com" ]
+            }' > /etc/docker/daemon.json
+            dockerd &  # Start Docker daemon
+            sleep 10   # Wait for the daemon to initialize
+            cd /workspace/Simple_Spring_Project/spring-project
             docker build -t harbor.devbsfintech23.com/test-discovery/simple-spring:test .
-        volumeMounts:
-          - name: workspace
-            mountPath: /workspace
+            echo "The Docker User is:"
+            echo $DOCKER_USER
+            echo "The Docker Password is:"
+            echo $DOCKER_PASS
 
-    - name: push-image
-      container:
-        image: docker:latest
-        command: [sh, -c]
-        args:
-          - |
-            docker login my-registry.com -u $DOCKER_USER -p $DOCKER_PASS
+            echo "Logging in to Harbor registry..."
+            docker login harbor.devbsfintech23.com -u $DOCKER_USER -p $DOCKER_PASS
+            
+            echo "Pushing the Docker image to Harbor..."
             docker push harbor.devbsfintech23.com/test-discovery/simple-spring:test
         env:
           - name: DOCKER_USER
             valueFrom:
               secretKeyRef:
                 name: docker-registry-secret
-                key: admin
+                key: username
           - name: DOCKER_PASS
             valueFrom:
               secretKeyRef:
                 name: docker-registry-secret
-                key: fintech@bs23
+                key: password
+        volumeMounts:
+          - name: workspace-pvc
+            mountPath: /workspace
+
+    # - name: push-image
+    #   container:
+    #     image: docker:19.03-dind
+    #     securityContext:
+    #       privileged: true
+    #     command: [sh, -c]
+    #     args:
+    #       - |
+    #         dockerd &  # Start Docker daemon
+    #         sleep 10   # Wait for the daemon to initialize
+
+    #         echo "Creating /etc/docker/daemon.json..."
+    #         mkdir -p /etc/docker
+    #         echo '{
+    #             "insecure-registries" : [ "harbor.devbsfintech23.com" ]
+    #         }' > /etc/docker/daemon.json
+
+    #         echo "Reloading daemon and restarting Docker..."
+    #         systemctl daemon-reload || true
+    #         systemctl restart docker || true
+
+    #         echo "Waiting for Docker to stabilize..."
+    #         sleep 15
+
+    #         echo "Logging in to Harbor registry..."
+    #         docker login harbor.devbsfintech23.com -u $DOCKER_USER -p $DOCKER_PASS
+            
+    #         echo "Pushing the Docker image to Harbor..."
+    #         docker push harbor.devbsfintech23.com/test-discovery/simple-spring:test
+    #     env:
+    #       - name: DOCKER_USER
+    #         valueFrom:
+    #           secretKeyRef:
+    #             name: docker-registry-secret
+    #             key: username
+    #       - name: DOCKER_PASS
+    #         valueFrom:
+    #           secretKeyRef:
+    #             name: docker-registry-secret
+    #             key: password
+    #     volumeMounts:
+    #       - name: workspace-pvc
+    #         mountPath: /workspace
 
     - name: deploy
       container:
@@ -68,7 +147,22 @@ spec:
         command: [sh, -c]
         args:
           - |
-            kubectl apply -f /workspace/repository/simple_spring_app.yaml
+            NAMESPACE="spring-boot-demo-namespace"
+            echo "Ensuring namespace $NAMESPACE exists..."
+            kubectl get namespace $NAMESPACE || kubectl create namespace $NAMESPACE
+            
+            echo "Deploying resources..."
+            kubectl apply -n $NAMESPACE -f /workspace/Simple_Spring_Project/simple_spring_app.yaml
+            kubectl apply -f /workspace/Simple_Spring_Project/simple_spring_app.yaml
         volumeMounts:
-          - name: workspace
+          - name: workspace-pvc
             mountPath: /workspace
+
+    # - name: delete-pvc
+    #   container:
+    #     image: bitnami/kubectl:latest
+    #     command: [sh, -c]
+    #     args:
+    #       - |
+    #         echo "Deleting PVC..."
+    #         kubectl delete pvc workspace-pvc-${workflow.metadata.name}
