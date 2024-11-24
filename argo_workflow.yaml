@@ -19,8 +19,8 @@ spec:
       steps:
         - - name: clone-repo
             template: git-clone
-        - - name: debug
-            template: debug
+        # - - name: debug
+        #     template: debug
         - - name: build-docker-image
             template: build-image
         # - - name: push-docker-image
@@ -41,19 +41,19 @@ spec:
           - name: workspace-pvc
             mountPath: /workspace
 
-    - name: debug
-      container:
-        image: alpine:latest
-        command: [sh, -c]
-        args:
-          - |
-            echo "Listing workspace directory:"
-            ls -la /workspace
-            echo "Listing Simple_Spring_Project directory:"
-            ls -la /workspace/Simple_Spring_Project
-        volumeMounts:
-          - name: workspace-pvc
-            mountPath: /workspace
+    # - name: debug
+    #   container:
+    #     image: alpine:latest
+    #     command: [sh, -c]
+    #     args:
+    #       - |
+    #         echo "Listing workspace directory:"
+    #         ls -la /workspace
+    #         echo "Listing Simple_Spring_Project directory:"
+    #         ls -la /workspace/Simple_Spring_Project
+    #     volumeMounts:
+    #       - name: workspace-pvc
+    #         mountPath: /workspace
 
     - name: build-image
       container:
@@ -150,6 +150,13 @@ spec:
             NAMESPACE="spring-boot-demo-namespace"
             echo "Ensuring namespace $NAMESPACE exists..."
             kubectl get namespace $NAMESPACE || kubectl create namespace $NAMESPACE
+
+            echo "Creating Docker registry secret..."
+            kubectl create secret docker-registry docker-registry-secret \
+              --docker-server=harbor.devbsfintech23.com \
+              --docker-username=$DOCKER_USER \
+              --docker-password=$DOCKER_PASS \
+              --namespace=$NAMESPACE
             
             echo "Deploying resources..."
             kubectl apply -n $NAMESPACE -f /workspace/Simple_Spring_Project/simple_spring_app.yaml

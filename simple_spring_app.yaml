@@ -9,7 +9,7 @@ spec:
   resources:
     requests:
       storage: 1Gi  # Specify the storage size
-  storageClassName: standard  # Use the cephfs storage class
+  storageClassName: rook-cephfs  # Use the cephfs storage class
 
 ---
 apiVersion: apps/v1
@@ -32,6 +32,8 @@ spec:
         prometheus.io/port: "8080"   
         prometheus.io/path: "/actuator/prometheus" 
     spec:
+      imagePullSecrets:
+        - name: docker-registry-secret  # Refer to the secret here
       containers:
         - name: spring-boot-demo
           image: harbor.devbsfintech23.com/test-discovery/simple-spring:test
