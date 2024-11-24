@@ -1,0 +1,12 @@
+#buildpacks heroku builds for arm
+pack build spring-app-image --path . --builder heroku/builder:24
+docker run -p 8080:8080 spring-app-image
+##did not ask for .mvn 
+
+#packeto buildpacks builds for linux
+pack build spring-app-packeto --builder paketobuildpacks/builder:base
+docker run -p 8080:8080 spring-app-image
+##asked for .mvn
+
+#Generate .mvn using:
+mvn wrapper:wrapper -Dtype=bin

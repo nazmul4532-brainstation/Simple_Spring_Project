@@ -1,0 +1,74 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: stateless-ci-cd-pipeline-
+spec:
+  entrypoint: pipeline
+  volumes:
+    - name: workspace
+      emptyDir: {}  # Ephemeral storage for the workflow
+  templates:
+    - name: pipeline
+      steps:
+        - - name: clone-repo
+            template: git-clone
+        - - name: build-docker-image
+            template: build-image
+        - - name: push-docker-image
+            template: push-image
+        - - name: deploy-app
+            template: deploy
+
+    - name: git-clone
+      container:
+        image: alpine/git:latest
+        command: [sh, -c]
+        args:
+          - |
+            git clone https://github.com/username/repository.git /workspace/repository
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+
+    - name: build-image
+      container:
+        image: docker:latest
+        command: [sh, -c]
+        args:
+          - |
+            cd /workspace/repository/spring-project
+            docker build -t harbor.devbsfintech23.com/test-discovery/simple-spring:test .
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+
+    - name: push-image
+      container:
+        image: docker:latest
+        command: [sh, -c]
+        args:
+          - |
+            docker login my-registry.com -u $DOCKER_USER -p $DOCKER_PASS
+            docker push harbor.devbsfintech23.com/test-discovery/simple-spring:test
+        env:
+          - name: DOCKER_USER
+            valueFrom:
+              secretKeyRef:
+                name: docker-registry-secret
+                key: username
+          - name: DOCKER_PASS
+            valueFrom:
+              secretKeyRef:
+                name: docker-registry-secret
+                key: password
+
+    - name: deploy
+      container:
+        image: bitnami/kubectl:latest
+        command: [sh, -c]
+        args:
+          - |
+            kubectl apply -f /workspace/repository/simple_spring_app.yaml
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace

@@ -1,0 +1,54 @@
+##image build command
+docker build --platform linux/amd64 -t nazmul4532brainstation/spring-boot-demo:latest .
+docker push nazmul4532brainstation/spring-boot-demo:latest
+
+#In Prometheus-Server ConfigMap
+
+##Detector Jobs
+####Check under scrape_configs: in the prometheus values file
+##Creating Custom Alerts
+####Check under custom_alerts.yml: in the prometheus values file
+##Adding Customer Alerts to Rules
+│     global:                                                                                                                                   │
+│       evaluation_interval: 1m                                                                                                                 │
+│       scrape_interval: 1m                                                                                                                     │
+│       scrape_timeout: 10s                                                                                                                     │
+│     rule_files:                                                                                                                               │
+│     - /etc/config/recording_rules.yml                                                                                                         │
+│     - /etc/config/alerting_rules.yml                                                                                                          │
+│     - /etc/config/rules                                                                                                                       │
+│     - /etc/config/alerts                                                                                                                      │
+│     - /etc/config/custom_alerts.yml   
+
+
+#Under Prometheus-Alert-Manager ConfigMap
+##Configuring Email and Notification Interval and the SMTP Configurations for sending mails
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+    receivers:
+    - email_configs:
+      - auth_identity: <sender-email>
+        auth_password: <app-password>
+        auth_username: sender-email>
+        from: sender-email>
+        require_tls: true
+        smarthost: smtp.gmail.com:587
+        to: receiver-email>
+      name: email-notifications
+    route:
+      group_by:
+      - alertname
+      group_interval: 5m
+      group_wait: 30s
+      receiver: email-notifications
+      repeat_interval: 3h
+    templates:
+    - /etc/alertmanager/*.tmpl
+
+
+##Applying Metrics API in a cluster... wait a while
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+##Applying kube-state-metrics for detecting Kube States
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/kube-state-metrics/master/examples/standard/deployment.yaml
