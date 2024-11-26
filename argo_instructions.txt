@@ -3,6 +3,7 @@ ARGO_WORKFLOWS_VERSION="v3.6.0"
 kubectl create namespace argo
 kubectl apply -n argo -f "https://github.com/argoproj/argo-workflows/releases/download/${ARGO_WORKFLOWS_VERSION}/quick-start-minimal.yaml"
 
+#pull harbor secret from somewhere to be able to push to harbor
 
 #access UI
 kubectl -n argo port-forward service/argo-server 2746:2746

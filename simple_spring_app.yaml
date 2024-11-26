@@ -2,21 +2,21 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: spring-boot-demo-pvc
-  namespace: spring-boot-demo-namespace  # Specify the namespace here
+  namespace: spring-app
 spec:
   accessModes:
-    - ReadWriteOnce  # Adjust access mode as needed
+    - ReadWriteOnce 
   resources:
     requests:
-      storage: 1Gi  # Specify the storage size
-  storageClassName: standard  # Use the cephfs storage class
+      storage: 1Gi  
+  storageClassName: standard  
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: spring-boot-demo
-  namespace: spring-boot-demo-namespace  # Specify the namespace here
+  namespace: spring-app
   labels:
     app: spring-boot-demo
 spec:
@@ -32,27 +32,25 @@ spec:
         prometheus.io/port: "8080"   
         prometheus.io/path: "/actuator/prometheus" 
     spec:
-      imagePullSecrets:
-        - name: docker-registry-secret  # Refer to the secret here
       containers:
-        - name: spring-boot-demo
-          image: harbor.devbsfintech23.com/test-discovery/simple-spring:test
+        - name: spring-app
+          image: nazmul4532brainstation/spring-boot-demo:latest
           ports:
             - containerPort: 8080
-          volumeMounts:  # Mount the PVC here
-            - mountPath: /data  # Path where the volume will be mounted in the container
-              name: spring-boot-demo-storage  # Name of the volume
-      volumes:  # Define the volume
+          volumeMounts: 
+            - mountPath: /data 
+              name: spring-boot-demo-storage  
+      volumes:  
         - name: spring-boot-demo-storage
           persistentVolumeClaim:
-            claimName: spring-boot-demo-pvc  # Reference the PVC created above
+            claimName: spring-boot-demo-pvc
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: spring-boot-demo
-  namespace: spring-boot-demo-namespace  # Specify the namespace here
+  namespace: spring-app 
   labels:
     app: spring-boot-demo
   annotations:                    

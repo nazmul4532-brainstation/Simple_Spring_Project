@@ -1,0 +1,143 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: argo-pipeline-
+spec:
+  entrypoint: pipeline
+  volumeClaimTemplates:
+    - metadata:
+        name: workspace-pvc
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+        storageClassName: openebs-hostpath
+        persistentVolumeReclaimPolicy: Delete
+  templates:
+    - name: pipeline
+      steps:
+        - - name: clone-repo
+            template: git-clone
+        - - name: build-docker-image
+            template: build-image
+        # - - name: push-image
+        #     template: push-image
+
+    - name: git-clone
+      container:
+        image: alpine/git:latest
+        command: [sh, -c]
+        args:
+          - |
+            echo "Cloning repository..."
+            git clone https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/${GITHUB_USERNAME}/Simple_Spring_Project.git /workspace/Simple_Spring_Project
+        env:
+          - name: GITHUB_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: github-creds
+                key: username
+          - name: GITHUB_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: github-creds
+                key: token
+        volumeMounts:
+          - name: workspace-pvc
+            mountPath: /workspace
+
+    - name: build-image
+      container:
+        image: docker:19.03-dind
+        securityContext:
+          privileged: true
+        command: [sh, -c]
+        args:
+          - |
+            echo "Creating /etc/docker/daemon.json..."
+            mkdir -p /etc/docker
+            echo '{
+                "insecure-registries" : [ "harbor.devbsfintech23.com" ]
+            }' > /etc/docker/daemon.json
+            echo "Starting Docker daemon..."
+            dockerd &  # Start Docker daemon
+            sleep 10   # Wait for the daemon to initialize
+            echo "Docker Config:"
+            ls /root/.docker/
+            cd /workspace/Simple_Spring_Project/spring-project
+            echo "Building Docker image..."
+            docker build -t harbor.devbsfintech23.com/test-discovery/simple-spring:test .
+            # echo "Saving Docker image to volume..."
+            # mkdir /workspace/workspace-pvc
+            # docker save harbor.devbsfintech23.com/test-discovery/simple-spring:test | gzip > /workspace/workspace-pvc/my-image.tar.gz
+
+            echo "Logging in to Harbor registry..."
+            docker login harbor.devbsfintech23.com -u $HARBOR_USER -p $HARBOR_PASS
+
+            echo "Pushing the image to Harbor..."
+            docker push harbor.devbsfintech23.com/test-discovery/simple-spring:test
+        env:
+          - name: HARBOR_USER
+            valueFrom:
+              secretKeyRef:
+                name: docker-registry-secret
+                key: username
+          - name: HARBOR_PASS
+            valueFrom:
+              secretKeyRef:
+                name: docker-registry-secret
+                key: password
+        volumeMounts:
+          - name: workspace-pvc
+            mountPath: /workspace
+
+
+    # - name: push-image
+    #   container:
+    #     image: docker:19.03-dind
+    #     securityContext:
+    #       privileged: true
+    #     command: [sh, -c]
+    #     args:
+    #       - |
+    #         echo "Creating /etc/docker/daemon.json..."
+    #         mkdir -p /etc/docker
+    #         echo '{
+    #             "insecure-registries" : [ "harbor.devbsfintech23.com" ]
+    #         }' > /etc/docker/daemon.json
+    #         echo "Starting Docker daemon..."
+    #         dockerd &  
+    #         sleep 10 
+    #         echo "Loading Docker image from volume..."
+    #         echo "Proper configuration"
+    #         cat /etc/docker/daemon.json
+    #         ls -l /etc/docker/daemon.json
+
+    #         docker load < /workspace/workspace-pvc/my-image.tar.gz
+
+
+    #         echo "Logging in to Harbor registry..."
+    #         docker login harbor.devbsfintech23.com -u $HARBOR_USER -p $HARBOR_PASS
+
+    #         echo "Pushing the image to Harbor..."
+    #         docker push harbor.devbsfintech23.com/test-discovery/simple-spring:test
+
+    #     env:
+    #       - name: HARBOR_USER
+    #         valueFrom:
+    #           secretKeyRef:
+    #             name: docker-registry-secret
+    #             key: username
+    #       - name: HARBOR_PASS
+    #         valueFrom:
+    #           secretKeyRef:
+    #             name: docker-registry-secret
+    #             key: password
+
+    #     volumeMounts:
+    #       - name: workspace-pvc
+    #         mountPath: /workspace
+    #       # - name: docker-config
+    #       #   mountPath: /etc/docker/daemon.json
+    #       #   subPath: .dockerdaemonjson  
