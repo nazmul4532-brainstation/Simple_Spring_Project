@@ -34,7 +34,7 @@ spec:
     spec:
       containers:
         - name: spring-app
-          image: harbor-core.harbor.svc.cluster.local/test-discovery/simple-spring:test
+          image: harbor.devbsfintech23.com/test-discovery/simple-spring:test
           ports:
             - containerPort: 8080
           volumeMounts: 

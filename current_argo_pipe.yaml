@@ -78,6 +78,7 @@ spec:
                 exit 1;
             }
             echo "Saving Docker image to volume..."
+            mkdir /workspace/workspace-pvc
             docker save harbor-core.harbor.svc.cluster.local/test-discovery/simple-spring:test | gzip > /workspace/workspace-pvc/my-image.tar.gz || {
                 echo "Failed to save Docker image. Exiting.";
                 exit 1;
@@ -108,20 +109,19 @@ spec:
             }
 
             echo "Logging in to Harbor registry..."
-            for i in {1..5}; do
+            for i in $(seq 1 5); do
                 if docker login http://harbor-core.harbor.svc.cluster.local -u "$HARBOR_USER" -p "$HARBOR_PASS"; then
                     echo "Login Succeeded"
                     break
                 else
                     echo "Login failed. Retrying... ($i/5)"
-                    sleep 2
+                    sleep 5
                 fi
                 if [ "$i" -eq 5 ]; then
-                    echo "Login failed after 5 attempts. Exiting.";
-                    exit 1;
+                    echo "Login failed after 5 attempts. Exiting."
+                    exit 1
                 fi
             done
-
             echo "Pushing Docker image..."
             docker push harbor-core.harbor.svc.cluster.local/test-discovery/simple-spring:test || {
                 echo "Failed to push Docker image. Exiting.";
