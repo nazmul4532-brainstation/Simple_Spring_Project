@@ -9,7 +9,7 @@ spec:
   resources:
     requests:
       storage: 1Gi  
-  storageClassName: standard  
+  storageClassName: openebs-hostpath 
 
 ---
 apiVersion: apps/v1
@@ -34,7 +34,7 @@ spec:
     spec:
       containers:
         - name: spring-app
-          image: nazmul4532brainstation/spring-boot-demo:latest
+          image: harbor-core.harbor.svc.cluster.local/test-discovery/simple-spring:test
           ports:
             - containerPort: 8080
           volumeMounts: 
