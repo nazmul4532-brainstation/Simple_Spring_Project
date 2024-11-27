@@ -32,8 +32,12 @@ spec:
         command: [sh, -c]
         args:
           - |
+            set -e
             echo "Cloning repository..."
-            git clone https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/${GITHUB_USERNAME}/Simple_Spring_Project.git /workspace/Simple_Spring_Project
+            git clone https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/${GITHUB_USERNAME}/Simple_Spring_Project.git /workspace/Simple_Spring_Project || {
+                echo "Failed to clone repository. Exiting.";
+                exit 1;
+            }
         env:
           - name: GITHUB_USERNAME
             valueFrom:
@@ -57,26 +61,30 @@ spec:
         command: [sh, -c]
         args:
           - |
-            echo "Creating /etc/docker/daemon.json..."
+            set -e
+            echo "Configuring Docker daemon..."
             mkdir -p /etc/docker
             echo '{
                 "insecure-registries" : [ "harbor-core.harbor.svc.cluster.local" ]
             }' > /etc/docker/daemon.json
             echo "Starting Docker daemon..."
-            dockerd &  # Start Docker daemon
-            sleep 10   # Wait for the daemon to initialize
-            echo "Docker Config:"
-            ls /root/.docker/
-            cd /workspace/Simple_Spring_Project/spring-project
+            dockerd &  
+            sleep 10 
+
             echo "Building Docker image..."
-            docker build -t harbor-core.harbor.svc.cluster.local/test-discovery/simple-spring:test .
+            cd /workspace/Simple_Spring_Project/spring-project
+            docker build -t harbor-core.harbor.svc.cluster.local/test-discovery/simple-spring:test . || {
+                echo "Failed to build Docker image. Exiting.";
+                exit 1;
+            }
             echo "Saving Docker image to volume..."
-            mkdir /workspace/workspace-pvc
-            docker save harbor-core.harbor.svc.cluster.local/test-discovery/simple-spring:test | gzip > /workspace/workspace-pvc/my-image.tar.gz
+            docker save harbor-core.harbor.svc.cluster.local/test-discovery/simple-spring:test | gzip > /workspace/workspace-pvc/my-image.tar.gz || {
+                echo "Failed to save Docker image. Exiting.";
+                exit 1;
+            }
         volumeMounts:
           - name: workspace-pvc
             mountPath: /workspace
-
 
     - name: push-image
       container:
@@ -86,27 +94,39 @@ spec:
         command: [sh, -c]
         args:
           - |
-            echo "Creating /etc/docker/daemon.json..."
+            set -e
+            echo "Configuring Docker daemon..."
             mkdir -p /etc/docker
             echo '{"insecure-registries" : [ "harbor-core.harbor.svc.cluster.local" ]}' > /etc/docker/daemon.json
-            sleep 15
-            echo "Starting Docker daemon..."
             dockerd &  
-            sleep 25 
-            echo "Verifying Docker daemon status..."
-            docker version
-            docker info
-            echo "Loading Docker image from volume..."
-            echo "Proper configuration"
-            cat /etc/docker/daemon.json
-            ls -l /etc/docker/daemon.json
-            docker load < /workspace/workspace-pvc/my-image.tar.gz
-            echo "Logging in to Harbor registry..."
-            docker login http://harbor-core.harbor.svc.cluster.local -u $HARBOR_USER -p $HARBOR_PASS
             sleep 10 
-            echo "Pushing the image to Harbor..."
-            docker push harbor-core.harbor.svc.cluster.local/test-discovery/simple-spring:test
 
+            echo "Loading Docker image from volume..."
+            docker load < /workspace/workspace-pvc/my-image.tar.gz || {
+                echo "Failed to load Docker image. Exiting.";
+                exit 1;
+            }
+
+            echo "Logging in to Harbor registry..."
+            for i in {1..5}; do
+                if docker login http://harbor-core.harbor.svc.cluster.local -u "$HARBOR_USER" -p "$HARBOR_PASS"; then
+                    echo "Login Succeeded"
+                    break
+                else
+                    echo "Login failed. Retrying... ($i/5)"
+                    sleep 2
+                fi
+                if [ "$i" -eq 5 ]; then
+                    echo "Login failed after 5 attempts. Exiting.";
+                    exit 1;
+                fi
+            done
+
+            echo "Pushing Docker image..."
+            docker push harbor-core.harbor.svc.cluster.local/test-discovery/simple-spring:test || {
+                echo "Failed to push Docker image. Exiting.";
+                exit 1;
+            }
         env:
           - name: HARBOR_USER
             valueFrom:
@@ -118,23 +138,35 @@ spec:
               secretKeyRef:
                 name: docker-registry-secret
                 key: password
-
         volumeMounts:
           - name: workspace-pvc
             mountPath: /workspace
+
     - name: deploy
       container:
         image: bitnami/kubectl:latest
         command: [sh, -c]
         args:
           - |
+            set -e
             NAMESPACE="spring-app"
             echo "Ensuring namespace $NAMESPACE exists..."
-            kubectl get namespace $NAMESPACE || kubectl create namespace $NAMESPACE
-            
-            echo "Deploying resources..."
-            kubectl apply -n $NAMESPACE -f /workspace/Simple_Spring_Project/simple_spring_app.yaml
-            kubectl apply -f /workspace/Simple_Spring_Project/simple_spring_app.yaml
+            kubectl get namespace $NAMESPACE || kubectl create namespace $NAMESPACE || {
+                echo "Failed to ensure namespace exists. Exiting.";
+                exit 1;
+            }
+
+            echo "Copying secret to target namespace..."
+            kubectl get secret fintech-harbor -n argo -o yaml | sed "s/namespace: argo/namespace: $NAMESPACE/" | kubectl apply -n $NAMESPACE -f - || {
+                echo "Failed to copy secret. Exiting.";
+                exit 1;
+            }
+
+            echo "Deploying application..."
+            kubectl apply -n $NAMESPACE -f /workspace/Simple_Spring_Project/simple_spring_app.yaml || {
+                echo "Failed to deploy application. Exiting.";
+                exit 1;
+            }
         volumeMounts:
           - name: workspace-pvc
             mountPath: /workspace

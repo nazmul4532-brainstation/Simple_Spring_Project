@@ -44,6 +44,8 @@ spec:
         - name: spring-boot-demo-storage
           persistentVolumeClaim:
             claimName: spring-boot-demo-pvc
+      imagePullSecrets:
+        - name: fintech-harbor
 
 ---
 apiVersion: v1
