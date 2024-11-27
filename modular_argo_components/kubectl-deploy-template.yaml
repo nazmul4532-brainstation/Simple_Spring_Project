@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: kubectl-deploy-template
+spec:
+  templates:
+    - name: kubectl-deploy
+      inputs:
+        parameters:
+          - name: kubectl-deployment-config
+      container:
+        image: bitnami/kubectl:latest
+        command: [sh, -c]
+        args:
+          - |
+            set -e
+            NAMESPACE="spring-app"
+            echo "Ensuring namespace $NAMESPACE exists..."
+            kubectl get namespace $NAMESPACE || kubectl create namespace $NAMESPACE || {
+                echo "Failed to ensure namespace exists. Exiting.";
+                exit 1;
+            }
+
+            echo "Copying secret to target namespace..."
+            kubectl get secret fintech-harbor -n argo -o yaml | sed "s/namespace: argo/namespace: $NAMESPACE/" | kubectl apply -n $NAMESPACE -f - || {
+                echo "Failed to copy secret. Exiting.";
+                exit 1;
+            }
+
+            echo "Deploying application..."
+            kubectl apply -n $NAMESPACE -f ${DEPLOYMENT_CONFIG} || {
+                echo "Failed to deploy application. Exiting.";
+                exit 1;
+            }
+        env:
+          - name: DEPLOYMENT_CONFIG
+            value: "{{inputs.parameters.kubectl-deployment-config}}"
+        volumeMounts:
+          - name: workspace-pvc
+            mountPath: /workspace

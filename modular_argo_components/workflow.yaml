@@ -1,0 +1,123 @@
+# apiVersion: argoproj.io/v1alpha1
+# kind: Workflow
+# metadata:
+#   generateName: argo-pipeline-
+# spec:
+#   entrypoint: pipeline
+#   volumeClaimTemplates:
+#     - metadata:
+#         name: workspace-pvc
+#       spec:
+#         accessModes: ["ReadWriteOnce"]
+#         resources:
+#           requests:
+#             storage: 1Gi
+#         storageClassName: openebs-hostpath
+#   templates:
+#     - name: pipeline
+#       steps:
+#         - - name: clone-repos
+#             templateRef:
+#               name: git-clone-template
+#               template: git-clone
+#           arguments:
+#             parameters:
+#               - name: source-repo
+#                 value: "{{workflow.parameters.source-repo}}"
+#               - name: source-branch
+#                 value: "{{workflow.parameters.source-branch}}"
+#               - name: config-repo
+#                 value: "{{workflow.parameters.config-repo}}"
+#               - name: config-branch
+#                 value: "{{workflow.parameters.config-branch}}"
+#         - - name: build-docker-image
+#             templateRef:
+#               name: build-image-template
+#               template: build-image
+#           arguments:
+#             parameters:
+#               - name: image-name
+#                 value: "{{workflow.parameters.image-name}}"
+#         - - name: push-image
+#             templateRef:
+#               name: push-image-template
+#               template: push-image
+#           arguments:
+#             parameters:
+#               - name: image-name
+#                 value: "{{workflow.parameters.image-name}}"
+#         - - name: deploy-app
+#             templateRef:
+#               name: deploy-template
+#               template: deploy
+#           arguments:
+#             parameters:
+#               - name: deployment-config
+#                 value: "{{workflow.parameters.deployment-config}}"
+
+#   arguments:
+#     parameters:
+#       - name: source-repo
+#       - name: source-branch
+#         value: "main"
+#       - name: config-repo
+#       - name: config-branch
+#         value: "main"
+#       - name: image-name
+#       - name: deployment-config
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: argo-pipeline-
+spec:
+  entrypoint: pipeline
+  volumeClaimTemplates:
+    - metadata:
+        name: workspace-pvc
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+        storageClassName: openebs-hostpath
+  templates:
+    - name: pipeline
+      steps:
+        - - name: clone-repos
+            templateRef:
+              name: git-clone-template
+              template: git-clone
+            arguments:
+              parameters:
+                - name: source-repo
+                  value: "https://github.com/nazmul4532-brainstation/Simple_Spring_Project.git"
+                - name: source-branch
+                  value: "main"
+                - name: config-repo
+                  value: "https://github.com/nazmul4532-brainstation/Simple_Spring_Project.git"
+                - name: config-branch
+                  value: "main"
+        - - name: build-docker-image
+            templateRef:
+              name: build-image-template
+              template: build-image
+            arguments:
+              parameters:
+                - name: image-name
+                  value: "harbor-core.harbor.svc.cluster.local/test-discovery/simple-spring:test"
+        - - name: push-image
+            templateRef:
+              name: push-image-template
+              template: push-image
+            arguments:
+              parameters:
+                - name: image-name
+                  value: "harbor-core.harbor.svc.cluster.local/test-discovery/simple-spring:test"
+        - - name: deploy-app
+            templateRef:
+              name: kubectl-deploy-template
+              template: kubectl-deploy
+            arguments:
+              parameters:
+                - name: kubectl-deployment-config
+                  value: "/workspace/config/simple_spring_app.yaml"

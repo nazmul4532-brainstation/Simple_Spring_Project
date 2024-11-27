@@ -1,0 +1,44 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: git-clone-template
+spec:
+  templates:
+    - name: git-clone
+      inputs:
+        parameters:
+          - name: source-repo
+          - name: source-branch
+          - name: config-repo
+          - name: config-branch
+      container:
+        image: alpine/git:latest
+        command: [sh, -c]
+        args:
+          - |
+            set -e
+            echo "Cloning source repository branch '${SOURCE_BRANCH}'..."
+            git clone --branch ${SOURCE_BRANCH} ${SOURCE_REPO} /workspace/source || {
+                echo "Failed to clone source repository. Exiting.";
+                exit 1;
+            }
+
+            sleep 10
+
+            echo "Cloning configuration repository branch '${CONFIG_BRANCH}'..."
+            git clone --branch ${CONFIG_BRANCH} ${CONFIG_REPO} /workspace/config || {
+                echo "Failed to clone configuration repository. Exiting.";
+                exit 1;
+            }
+        env:
+          - name: SOURCE_REPO
+            value: "{{inputs.parameters.source-repo}}"
+          - name: SOURCE_BRANCH
+            value: "{{inputs.parameters.source-branch}}"
+          - name: CONFIG_REPO
+            value: "{{inputs.parameters.config-repo}}"
+          - name: CONFIG_BRANCH
+            value: "{{inputs.parameters.config-branch}}"
+        volumeMounts:
+          - name: workspace-pvc
+            mountPath: /workspace

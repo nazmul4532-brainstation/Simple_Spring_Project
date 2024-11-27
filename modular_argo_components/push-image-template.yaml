@@ -1,0 +1,57 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: push-image-template
+spec:
+  templates:
+    - name: push-image
+      inputs:
+        parameters:
+          - name: image-name
+      container:
+        image: docker:19.03-dind
+        securityContext:
+          privileged: true
+        command: [sh, -c]
+        args:
+          - |
+            set -e
+            echo "Configuring Docker daemon..."
+            mkdir -p /etc/docker
+            echo '{"insecure-registries" : [ "harbor-core.harbor.svc.cluster.local" ]}' > /etc/docker/daemon.json
+            dockerd &  
+            sleep 10 
+
+            echo "Loading Docker image from volume..."
+            docker load < /workspace/workspace-pvc/built-image.tar.gz || {
+                echo "Failed to load built Docker image in build stage. Exiting.";
+                exit 1;
+            }
+
+            echo "Logging in to Harbor registry..."
+            docker login http://harbor-core.harbor.svc.cluster.local -u "$HARBOR_USER" -p "$HARBOR_PASS" || {
+                echo "Login failed. Exiting.";
+                exit 1;
+            }
+            
+            echo "Pushing Docker image..."
+            docker push ${IMAGE_NAME} || {
+                echo "Failed to push Docker image. Exiting.";
+                exit 1;
+            }
+        env:
+          - name: IMAGE_NAME
+            value: "{{inputs.parameters.image-name}}"
+          - name: HARBOR_USER
+            valueFrom:
+              secretKeyRef:
+                name: docker-registry-secret
+                key: username
+          - name: HARBOR_PASS
+            valueFrom:
+              secretKeyRef:
+                name: docker-registry-secret
+                key: password
+        volumeMounts:
+          - name: workspace-pvc
+            mountPath: /workspace

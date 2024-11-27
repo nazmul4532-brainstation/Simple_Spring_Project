@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: build-image-template
+spec:
+  templates:
+    - name: build-image
+      inputs:
+        parameters:
+          - name: image-name
+      container:
+        image: docker:19.03-dind
+        securityContext:
+          privileged: true
+        command: [sh, -c]
+        args:
+          - |
+            dockerd &  
+            sleep 10 
+
+            echo "Building Docker image..."
+            cd /workspace/source/spring-project
+            docker build -t ${IMAGE_NAME} . || {
+                echo "Failed to build Docker image. Exiting.";
+                exit 1;
+            }
+            
+            echo "Saving Docker image to volume..."
+            mkdir /workspace/workspace-pvc
+            docker save ${IMAGE_NAME} | gzip > /workspace/workspace-pvc/built-image.tar.gz || {
+                echo "Failed to save Docker image. Exiting.";
+                exit 1;
+            }
+        env:
+          - name: IMAGE_NAME
+            value: "{{inputs.parameters.image-name}}"
+        volumeMounts:
+          - name: workspace-pvc
+            mountPath: /workspace
