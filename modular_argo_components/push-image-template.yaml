@@ -20,11 +20,12 @@ spec:
             mkdir -p /etc/docker
             echo '{"insecure-registries" : [ "harbor-core.harbor.svc.cluster.local" ]}' > /etc/docker/daemon.json
             dockerd &  
+
             while ! docker info > /dev/null 2>&1; do
               echo "Waiting for Docker daemon to start..."
               sleep 1
             done
-
+            sleep 10
             echo "Loading Docker image from volume..."
             docker load < /workspace/images/built-image.tar.gz || {
                 echo "Failed to load built Docker image in build stage. Exiting.";

@@ -19,20 +19,49 @@ spec:
             default: ""
             optional: true
       container:
-        image: alpine/helm:3.12.3
+        image: alpine:3.18 # Using Alpine base image to keep it lightweight
         command: [sh, -c]
         args:
           - |
             set -e
-            echo "Starting Helm deployment..."
+            echo "Starting Helm and kubectl installation..."
 
-            echo "Ensuring namespace exists: ${NAMESPACE}..."
-            kubectl get namespace ${NAMESPACE} || kubectl create namespace ${NAMESPACE}
+            # Install curl
+            echo "Installing curl..."
+            apk add --no-cache curl
+
+            # Install kubectl
+            echo "Installing kubectl..."
+            curl -LO "https://dl.k8s.io/release/v1.26.0/bin/linux/amd64/kubectl"
+            chmod +x ./kubectl
+            mv ./kubectl /usr/local/bin/kubectl
+
+            # Install Helm
+            echo "Installing Helm..."
+            curl https://get.helm.sh/helm-v3.12.3-linux-amd64.tar.gz -o helm.tar.gz
+            tar -xzvf helm.tar.gz
+            mv linux-amd64/helm /usr/local/bin/helm
+            rm -rf linux-amd64 helm.tar.gz
+
+            echo "Helm and kubectl installed successfully."
+
+            echo "Ensuring namespace $NAMESPACE exists..."
+            kubectl get namespace $NAMESPACE || kubectl create namespace $NAMESPACE || {
+                echo "Failed to ensure namespace exists. Exiting.";
+                exit 1;
+            }
+
+            echo "Copying secret to target namespace..."
+            kubectl get secret fintech-harbor -n argo -o yaml | sed "s/namespace: argo/namespace: $NAMESPACE/" | kubectl apply -n $NAMESPACE -f - || {
+                echo "Failed to copy secret. Exiting.";
+                exit 1;
+            }
 
             echo "Deploying Helm chart from path: ${CHART_PATH}..."
             helm upgrade --install ${RELEASE_NAME} ${CHART_PATH} \
               --namespace ${NAMESPACE} \
               $(test -n "${VALUES_FILE}" && echo "--values ${VALUES_FILE}") \
+              $(test -n "${SET_VALUES}" && echo "--set ${SET_VALUES}")
             echo "Helm deployment completed."
         env:
           - name: RELEASE_NAME
@@ -45,3 +74,6 @@ spec:
             value: "{{inputs.parameters.values-file}}"
           - name: SET_VALUES
             value: "{{inputs.parameters.set-values}}"
+        volumeMounts:
+          - name: workspace-pvc
+            mountPath: /workspace

@@ -32,22 +32,22 @@ spec:
                   value: "k8s-local"
                 - name: secret-creds
                   value: "gitea-test" 
-        - - name: build-image
-            templateRef:
-              name: build-image-template
-              template: build-image
-            arguments:
-              parameters:
-                - name: image-name
-                  value: "harbor-core.harbor.svc.cluster.local/test-discovery/bs-wallet-meta-service:test"
-        - - name: push-image
-            templateRef:
-              name: push-image-template
-              template: push-image
-            arguments:
-              parameters:
-                - name: image-name
-                  value: "harbor-core.harbor.svc.cluster.local/test-discovery/bs-wallet-meta-service:test"
+        # - - name: build-image
+        #     templateRef:
+        #       name: build-image-template
+        #       template: build-image
+        #     arguments:
+        #       parameters:
+        #         - name: image-name
+        #           value: "harbor-core.harbor.svc.cluster.local/test-discovery/bs-wallet-meta-service:test"
+        # - - name: push-image
+        #     templateRef:
+        #       name: push-image-template
+        #       template: push-image
+        #     arguments:
+        #       parameters:
+        #         - name: image-name
+        #           value: "harbor-core.harbor.svc.cluster.local/test-discovery/bs-wallet-meta-service:test"
         - - name: helm-deploy
             templateRef:
               name: helm-deploy-template
