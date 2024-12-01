@@ -48,7 +48,6 @@ spec:
         args:
           - |
             echo "Installing Docker"
-            # Install Docker dependencies
             apk update && apk add --no-cache \
               curl \
               bash \

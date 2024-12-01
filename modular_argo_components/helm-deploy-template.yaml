@@ -19,24 +19,21 @@ spec:
             default: ""
             optional: true
       container:
-        image: alpine:3.18 # Using Alpine base image to keep it lightweight
+        image: alpine:3.18 
         command: [sh, -c]
         args:
           - |
             set -e
             echo "Starting Helm and kubectl installation..."
 
-            # Install curl
             echo "Installing curl..."
             apk add --no-cache curl
 
-            # Install kubectl
             echo "Installing kubectl..."
             curl -LO "https://dl.k8s.io/release/v1.26.0/bin/linux/amd64/kubectl"
             chmod +x ./kubectl
             mv ./kubectl /usr/local/bin/kubectl
 
-            # Install Helm
             echo "Installing Helm..."
             curl https://get.helm.sh/helm-v3.12.3-linux-amd64.tar.gz -o helm.tar.gz
             tar -xzvf helm.tar.gz
