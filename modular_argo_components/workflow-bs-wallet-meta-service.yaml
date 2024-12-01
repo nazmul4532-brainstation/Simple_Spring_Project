@@ -1,0 +1,60 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: argo-pipeline-
+spec:
+  entrypoint: pipeline
+  volumeClaimTemplates:
+    - metadata:
+        name: workspace-pvc
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+        storageClassName: openebs-hostpath
+  templates:
+    - name: pipeline
+      steps:
+        - - name: clone-repos
+            templateRef:
+              name: git-clone-template
+              template: git-clone
+            arguments:
+              parameters:
+                - name: source-repo
+                  value: "bs-wallet-meta-service"
+                - name: source-branch
+                  value: "k8s-local"
+                - name: config-repo
+                  value: "bs-wallet-deployments"
+                - name: config-branch
+                  value: "k8s-local"
+                - name: secret-creds
+                  value: "gitea-test" 
+        - - name: build-image
+            templateRef:
+              name: build-image-template
+              template: build-image
+            arguments:
+              parameters:
+                - name: image-name
+                  value: "harbor-core.harbor.svc.cluster.local/test-discovery/bs-wallet-meta-service:test"
+        - - name: push-image
+            templateRef:
+              name: push-image-template
+              template: push-image
+            arguments:
+              parameters:
+                - name: image-name
+                  value: "harbor-core.harbor.svc.cluster.local/test-discovery/bs-wallet-meta-service:test"
+        - - name: helm-deploy
+            templateRef:
+              name: helm-deploy-template
+              template: helm-deploy
+            arguments:
+              parameters:
+                - name: release-name
+                  value: "bs-wallet-meta-service"
+                - name: namespace
+                  value: "meta-service-test"

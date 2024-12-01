@@ -1,0 +1,47 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: helm-deploy-template
+spec:
+  templates:
+    - name: helm-deploy
+      inputs:
+        parameters:
+          - name: release-name
+          - name: namespace
+          - name: chart-path
+            default: "/workspace/config/app-charts/springboot-app-chart-0.2.1.tgz"
+            optional: true
+          - name: values-file
+            default: "/workspace/config/app-services/{{inputs.parameters.release-name}}/values.yaml"
+            optional: true
+          - name: set-values
+            default: ""
+            optional: true
+      container:
+        image: alpine/helm:3.12.3
+        command: [sh, -c]
+        args:
+          - |
+            set -e
+            echo "Starting Helm deployment..."
+
+            echo "Ensuring namespace exists: ${NAMESPACE}..."
+            kubectl get namespace ${NAMESPACE} || kubectl create namespace ${NAMESPACE}
+
+            echo "Deploying Helm chart from path: ${CHART_PATH}..."
+            helm upgrade --install ${RELEASE_NAME} ${CHART_PATH} \
+              --namespace ${NAMESPACE} \
+              $(test -n "${VALUES_FILE}" && echo "--values ${VALUES_FILE}") \
+            echo "Helm deployment completed."
+        env:
+          - name: RELEASE_NAME
+            value: "{{inputs.parameters.release-name}}"
+          - name: NAMESPACE
+            value: "{{inputs.parameters.namespace}}"
+          - name: CHART_PATH
+            value: "{{inputs.parameters.chart-path}}"
+          - name: VALUES_FILE
+            value: "{{inputs.parameters.values-file}}"
+          - name: SET_VALUES
+            value: "{{inputs.parameters.set-values}}"

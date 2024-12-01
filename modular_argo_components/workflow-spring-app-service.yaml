@@ -32,8 +32,8 @@
 #                 value: "{{workflow.parameters.config-branch}}"
 #         - - name: build-docker-image
 #             templateRef:
-#               name: build-image-template
-#               template: build-image
+#               name: build-image-docker-template
+#               template: build-image-docker
 #           arguments:
 #             parameters:
 #               - name: image-name
@@ -99,8 +99,8 @@ spec:
                   value: "main"
         - - name: build-docker-image
             templateRef:
-              name: build-image-template
-              template: build-image
+              name: build-image-docker-template
+              template: build-image-docker
             arguments:
               parameters:
                 - name: image-name

@@ -78,8 +78,8 @@ spec:
                 exit 1;
             }
             echo "Saving Docker image to volume..."
-            mkdir /workspace/workspace-pvc
-            docker save harbor-core.harbor.svc.cluster.local/test-discovery/simple-spring:test | gzip > /workspace/workspace-pvc/my-image.tar.gz || {
+            mkdir /workspace/images
+            docker save harbor-core.harbor.svc.cluster.local/test-discovery/simple-spring:test | gzip > /workspace/images/built-image.tar.gz || {
                 echo "Failed to save Docker image. Exiting.";
                 exit 1;
             }
@@ -103,7 +103,7 @@ spec:
             sleep 10 
 
             echo "Loading Docker image from volume..."
-            docker load < /workspace/workspace-pvc/my-image.tar.gz || {
+            docker load < /workspace/images/my-image.tar.gz || {
                 echo "Failed to load Docker image. Exiting.";
                 exit 1;
             }

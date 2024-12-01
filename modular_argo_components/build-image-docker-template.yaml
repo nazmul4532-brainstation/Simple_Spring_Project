@@ -1,10 +1,10 @@
 apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
-  name: build-image-template
+  name: build-image-docker-template
 spec:
   templates:
-    - name: build-image
+    - name: build-image-docker
       inputs:
         parameters:
           - name: image-name
@@ -16,18 +16,21 @@ spec:
         args:
           - |
             dockerd &  
-            sleep 10 
+            while ! docker info > /dev/null 2>&1; do
+              echo "Waiting for Docker daemon to start..."
+              sleep 1
+            done
 
             echo "Building Docker image..."
-            cd /workspace/source/spring-project
+            cd /workspace/source
             docker build -t ${IMAGE_NAME} . || {
                 echo "Failed to build Docker image. Exiting.";
                 exit 1;
             }
             
             echo "Saving Docker image to volume..."
-            mkdir /workspace/workspace-pvc
-            docker save ${IMAGE_NAME} | gzip > /workspace/workspace-pvc/built-image.tar.gz || {
+            mkdir /workspace/images
+            docker save ${IMAGE_NAME} | gzip > /workspace/images/built-image.tar.gz || {
                 echo "Failed to save Docker image. Exiting.";
                 exit 1;
             }

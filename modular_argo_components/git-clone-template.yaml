@@ -11,14 +11,19 @@ spec:
           - name: source-branch
           - name: config-repo
           - name: config-branch
+          - name: secret-creds
       container:
         image: alpine/git:latest
         command: [sh, -c]
         args:
           - |
             set -e
+            SOURCE_URL="http://${GIT_USERNAME}:${GIT_PASSWORD}@172.16.231.10:3000/BS23/${SOURCE_REPO}.git"
+            CONFIG_URL="http://${GIT_USERNAME}:${GIT_PASSWORD}@172.16.231.10:3000/BS23/${CONFIG_REPO}.git"
             echo "Cloning source repository branch '${SOURCE_BRANCH}'..."
-            git clone --branch ${SOURCE_BRANCH} ${SOURCE_REPO} /workspace/source || {
+            git config --global credential.helper 'store'
+            
+            git clone --branch ${SOURCE_BRANCH} ${SOURCE_URL} /workspace/source || {
                 echo "Failed to clone source repository. Exiting.";
                 exit 1;
             }
@@ -26,7 +31,7 @@ spec:
             sleep 10
 
             echo "Cloning configuration repository branch '${CONFIG_BRANCH}'..."
-            git clone --branch ${CONFIG_BRANCH} ${CONFIG_REPO} /workspace/config || {
+            git clone --branch ${CONFIG_BRANCH} ${CONFIG_URL} /workspace/config || {
                 echo "Failed to clone configuration repository. Exiting.";
                 exit 1;
             }
@@ -39,6 +44,16 @@ spec:
             value: "{{inputs.parameters.config-repo}}"
           - name: CONFIG_BRANCH
             value: "{{inputs.parameters.config-branch}}"
+          - name: GIT_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: "{{inputs.parameters.secret-creds}}"
+                key: GIT_USERNAME
+          - name: GIT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: "{{inputs.parameters.secret-creds}}"
+                key: GIT_PASSWORD
         volumeMounts:
           - name: workspace-pvc
             mountPath: /workspace
