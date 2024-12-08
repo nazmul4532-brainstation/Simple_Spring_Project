@@ -33,10 +33,19 @@ spec:
             }
 
             echo "Logging in to Harbor registry..."
-            docker login http://harbor-core.harbor.svc.cluster.local -u "$HARBOR_USER" -p "$HARBOR_PASS" || {
-                echo "Login failed. Exiting.";
-                exit 1;
-            }
+            RETRIES=5
+            COUNT=0
+            while [ $COUNT -lt $RETRIES ]; do
+                docker login http://harbor-core.harbor.svc.cluster.local -u "$HARBOR_USER" -p "$HARBOR_PASS" && break
+                COUNT=$((COUNT + 1))
+                echo "Login attempt $COUNT failed. Retrying..."
+                sleep 2 # Wait for 2 seconds before retrying
+            done
+
+            if [ $COUNT -eq $RETRIES ]; then
+                echo "Login failed after $RETRIES attempts. Exiting."
+                exit 1
+            fi
             
             echo "Pushing Docker image..."
             docker push ${IMAGE_NAME} || {

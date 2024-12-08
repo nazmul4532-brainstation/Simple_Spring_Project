@@ -1,8 +1,7 @@
 service:
   enabled: true
-  type: NodePort  # Change to LoadBalancer if needed
+  type: NodePort
 
-# Configure Grafana to use Prometheus as a data source
 datasources:
   datasources.yaml:
     apiVersion: 1
@@ -10,6 +9,6 @@ datasources:
       - name: Prometheus
         type: prometheus
         access: proxy
-        url: http://prometheus-server.monitoring.svc.cluster.local:80  # Update based on your Prometheus service
+        url: http://prometheus-server.monitoring.svc.cluster.local:80
         isDefault: true
 

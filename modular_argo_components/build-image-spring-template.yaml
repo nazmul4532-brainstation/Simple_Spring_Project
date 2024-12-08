@@ -1,29 +1,86 @@
+# # apiVersion: argoproj.io/v1alpha1
+# # kind: WorkflowTemplate
+# # metadata:
+# #   name: build-image-template
+# # spec:
+# #   templates:
+# #     - name: build-image
+# #       inputs:
+# #         parameters:
+# #           - name: image-name
+# #       container:
+# #         image: paketobuildpacks/builder-jammy-base:latest
+# #         command: [sh, -c]
+# #         args:
+# #           - |
+# #             ls
+# #             cd /workspace/source
+# #             ls
+# #             chmod +x ./mvnw
+# #             echo "Building Image"
+# #             ./mvnw spring-boot:build-image \
+# #               -DskipTests \
+# #               -DimageName=${IMAGE_NAME} \
+# #               -Dspring-boot.run.profiles=k8s \
+# #               -Dspring-boot.build-image.builder=paketobuildpacks/builder-jammy-base:latest
+# #             echo "Attempt to build image is complete"
+# #         env:
+# #           - name: IMAGE_NAME
+# #             value: "{{inputs.parameters.image-name}}"
+# #         securityContext:
+# #           privileged: true
+# #         volumeMounts:
+# #           - name: workspace-pvc
+# #             mountPath: /workspace
 # apiVersion: argoproj.io/v1alpha1
 # kind: WorkflowTemplate
 # metadata:
-#   name: build-image-template
+#   name: build-image-spring-template
 # spec:
 #   templates:
-#     - name: build-image
+#     - name: build-image-spring
 #       inputs:
 #         parameters:
 #           - name: image-name
 #       container:
-#         image: paketobuildpacks/builder-jammy-base:latest
+#         image: openjdk:17-alpine
 #         command: [sh, -c]
 #         args:
 #           - |
-#             ls
+#             echo "Installing Docker"
+#             apk update && apk add --no-cache \
+#               curl \
+#               bash \
+#               sudo \
+#               docker
+
+#             echo "Docker installation complete"
+
+#             dockerd &
+
+#             while ! docker info > /dev/null 2>&1; do
+#               echo "Waiting for Docker daemon to start..."
+#               sleep 1
+#             done
+
+#             docker ps
+#             echo "Docker installed Successfully"
+            
 #             cd /workspace/source
-#             ls
 #             chmod +x ./mvnw
-#             echo "Building Image"
 #             ./mvnw spring-boot:build-image \
 #               -DskipTests \
 #               -DimageName=${IMAGE_NAME} \
 #               -Dspring-boot.run.profiles=k8s \
-#               -Dspring-boot.build-image.builder=paketobuildpacks/builder-jammy-base:latest
-#             echo "Attempt to build image is complete"
+#               -Dspring-boot.build-image.builder=paketobuildpacks/builder:latest
+
+#             echo "Archiving image filesystem layers..."
+#             mkdir /workspace/images
+#             docker save ${IMAGE_NAME} | gzip > /workspace/images/built-image.tar.gz || {
+#                 echo "Failed to save Docker image. Exiting.";
+#                 exit 1;
+#             }
+#             echo "Image filesystem archived as /workspace/images/built-image.tar.gz"
 #         env:
 #           - name: IMAGE_NAME
 #             value: "{{inputs.parameters.image-name}}"
@@ -47,6 +104,16 @@ spec:
         command: [sh, -c]
         args:
           - |
+            echo "Setting up Maven cache for image: ${IMAGE_NAME}"
+
+            mkdir -p /cache/${IMAGE_NAME}/maven
+
+            mkdir -p ~/.m2
+
+            ln -sfn /cache/${IMAGE_NAME}/maven ~/.m2/repository
+
+            echo "Using Maven cache at /cache/${IMAGE_NAME}/maven"
+
             echo "Installing Docker"
             apk update && apk add --no-cache \
               curl \
@@ -66,14 +133,18 @@ spec:
             docker ps
             echo "Docker installed Successfully"
             
+
             cd /workspace/source
             chmod +x ./mvnw
+
+            echo "Building the image..."
             ./mvnw spring-boot:build-image \
               -DskipTests \
               -DimageName=${IMAGE_NAME} \
               -Dspring-boot.run.profiles=k8s \
               -Dspring-boot.build-image.builder=paketobuildpacks/builder:latest
 
+            echo "Build complete!"
             echo "Archiving image filesystem layers..."
             mkdir /workspace/images
             docker save ${IMAGE_NAME} | gzip > /workspace/images/built-image.tar.gz || {
@@ -84,8 +155,12 @@ spec:
         env:
           - name: IMAGE_NAME
             value: "{{inputs.parameters.image-name}}"
-        securityContext:
-          privileged: true
         volumeMounts:
+          - name: maven-cache-pvc
+            mountPath: /cache
           - name: workspace-pvc
             mountPath: /workspace
+        securityContext:
+          privileged: true
+        nodeSelector:
+          kubernetes.io/hostname: worker-10

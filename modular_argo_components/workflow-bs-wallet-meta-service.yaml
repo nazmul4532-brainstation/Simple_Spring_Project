@@ -32,29 +32,33 @@ spec:
                   value: "k8s-local"
                 - name: secret-creds
                   value: "gitea-test" 
-        # - - name: build-image
-        #     templateRef:
-        #       name: build-image-template
-        #       template: build-image
-        #     arguments:
-        #       parameters:
-        #         - name: image-name
-        #           value: "harbor-core.harbor.svc.cluster.local/test-discovery/bs-wallet-meta-service:test"
-        # - - name: push-image
-        #     templateRef:
-        #       name: push-image-template
-        #       template: push-image
-        #     arguments:
-        #       parameters:
-        #         - name: image-name
-        #           value: "harbor-core.harbor.svc.cluster.local/test-discovery/bs-wallet-meta-service:test"
-        - - name: helm-deploy
+        - - name: build-image
             templateRef:
-              name: helm-deploy-template
-              template: helm-deploy
+              name: build-image-spring-template
+              template: build-image-spring
             arguments:
               parameters:
-                - name: release-name
-                  value: "bs-wallet-meta-service"
-                - name: namespace
-                  value: "meta-service-test"
+                - name: image-name
+                  value: "harbor-core.harbor.svc.cluster.local/test-discovery/bs-wallet-meta-service:test"
+        - - name: push-image
+            templateRef:
+              name: push-image-template
+              template: push-image
+            arguments:
+              parameters:
+                - name: image-name
+                  value: "harbor-core.harbor.svc.cluster.local/test-discovery/bs-wallet-meta-service:test"
+        # - - name: helm-deploy
+        #     templateRef:
+        #       name: helm-deploy-template
+        #       template: helm-deploy
+        #     arguments:
+        #       parameters:
+        #         - name: release-name
+        #           value: "bs-wallet-meta-service"
+        #         - name: namespace
+        #           value: "meta-service-test"
+  volumes:
+    - name: maven-cache-pvc
+      persistentVolumeClaim:
+        claimName: maven-cache-pvc
