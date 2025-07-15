@@ -90,9 +90,10 @@
 	    <plugin>
 	      <groupId>org.springframework.boot</groupId>
 	      <artifactId>spring-boot-maven-plugin</artifactId>
-	      <configuration>
-	        <aot>true</aot>
-	      </configuration>
+		<configuration>
+		  <aot>true</aot>
+		  <mainClass>com.example.demo.DemoApplication</mainClass>
+		</configuration>
 	    </plugin>
 	  </plugins>
 	</build>
