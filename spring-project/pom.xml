@@ -56,9 +56,36 @@
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
+	<profiles>
+		<profile>
+			<id>native</id>
+			<build>
+			<plugins>
+				<plugin>
+				<groupId>org.graalvm.buildtools</groupId>
+				<artifactId>native-maven-plugin</artifactId>
+				</plugin>
+			</plugins>
+			</build>
+		</profile>
+	</profiles>
+
 
 	<build>
 		<plugins>
+			<plugin>
+				<groupId>org.graalvm.buildtools</groupId>
+				<artifactId>native-maven-plugin</artifactId>
+				<version>0.10.2</version>
+				<executions>
+					<execution>
+					<goals>
+						<goal>compile-no-fork</goal>
+					</goals>
+					</execution>
+				</executions>
+			</plugin>
+
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
