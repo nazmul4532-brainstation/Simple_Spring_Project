@@ -1,6 +1,8 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" 
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
@@ -18,6 +20,7 @@
 
   <properties>
     <java.version>17</java.version>
+    <start-class>com.example.demo.DemoApplication</start-class>
   </properties>
 
   <dependencies>
@@ -45,26 +48,16 @@
       <artifactId>spring-boot-starter-test</artifactId>
       <scope>test</scope>
     </dependency>
-
-    <!-- ✅ Optional: Adds Spring Native support explicitly -->
-    <dependency>
-      <groupId>org.springframework.experimental</groupId>
-      <artifactId>spring-native</artifactId>
-      <version>0.12.1</version>
-      <scope>provided</scope>
-    </dependency>
   </dependencies>
 
   <build>
     <plugins>
-
-      <!-- ✅ Spring Boot Plugin with AOT and Repackage -->
+      <!-- Spring Boot Plugin with AOT and Repackage -->
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
           <aot>true</aot>
-          <mainClass>com.example.demo.DemoApplication</mainClass>
         </configuration>
         <executions>
           <execution>
@@ -75,7 +68,7 @@
         </executions>
       </plugin>
 
-      <!-- ✅ GraalVM Native Build Plugin -->
+      <!-- GraalVM Native Image Plugin -->
       <plugin>
         <groupId>org.graalvm.buildtools</groupId>
         <artifactId>native-maven-plugin</artifactId>
@@ -88,26 +81,9 @@
           </execution>
         </executions>
       </plugin>
-
-      <!-- ✅ Spring AOT Plugin -->
-      <plugin>
-        <groupId>org.springframework.experimental</groupId>
-        <artifactId>spring-aot-maven-plugin</artifactId>
-        <version>0.12.1</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>generate</goal>
-              <goal>test-generate</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
     </plugins>
   </build>
 
-  <!-- ✅ Retained Native Profile -->
   <profiles>
     <profile>
       <id>native</id>
@@ -121,4 +97,5 @@
       </build>
     </profile>
   </profiles>
+
 </project>
