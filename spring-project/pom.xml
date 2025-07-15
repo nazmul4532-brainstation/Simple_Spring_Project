@@ -70,27 +70,32 @@
 		</profile>
 	</profiles>
 
-
 	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.graalvm.buildtools</groupId>
-				<artifactId>native-maven-plugin</artifactId>
-				<version>0.10.2</version>
-				<executions>
-					<execution>
-					<goals>
-						<goal>compile-no-fork</goal>
-					</goals>
-					</execution>
-				</executions>
-			</plugin>
-
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>
-		</plugins>
+	  <plugins>
+	    <!-- GraalVM Native Build Plugin -->
+	    <plugin>
+	      <groupId>org.graalvm.buildtools</groupId>
+	      <artifactId>native-maven-plugin</artifactId>
+	      <version>0.10.2</version>
+	      <executions>
+	        <execution>
+	          <goals>
+	            <goal>compile-no-fork</goal>
+	          </goals>
+	        </execution>
+	      </executions>
+	    </plugin>
+	
+	    <!-- Spring Boot Plugin with AOT enabled -->
+	    <plugin>
+	      <groupId>org.springframework.boot</groupId>
+	      <artifactId>spring-boot-maven-plugin</artifactId>
+	      <configuration>
+	        <aot>true</aot>
+	      </configuration>
+	    </plugin>
+	  </plugins>
 	</build>
+
 
 </project>
