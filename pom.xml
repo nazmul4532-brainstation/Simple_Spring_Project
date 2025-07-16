@@ -59,19 +59,20 @@
   <build>
     <plugins>
 
-      <!-- ✅ Spring Boot Plugin with AOT and Start-Class in Manifest -->
+      <!-- ✅ Spring Boot Plugin with repackage phase and mainClass -->
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
-          <aot>true</aot>
-          <!-- <mainClass>${start-class}</mainClass> -->
+          <mainClass>${start-class}</mainClass>
         </configuration>
         <executions>
           <execution>
+            <id>repackage</id>
             <goals>
               <goal>repackage</goal>
             </goals>
+            <phase>package</phase>
           </execution>
         </executions>
       </plugin>
@@ -83,9 +84,11 @@
         <version>0.10.2</version>
         <executions>
           <execution>
+            <id>build-native</id>
             <goals>
               <goal>compile-no-fork</goal>
             </goals>
+            <phase>verify</phase>
           </execution>
         </executions>
       </plugin>
