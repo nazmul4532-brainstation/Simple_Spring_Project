@@ -65,7 +65,7 @@
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
           <aot>true</aot>
-          <mainClass>${start-class}</mainClass>
+          <!-- <mainClass>${start-class}</mainClass> -->
         </configuration>
         <executions>
           <execution>
