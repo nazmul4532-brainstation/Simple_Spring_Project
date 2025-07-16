@@ -24,25 +24,31 @@
   </properties>
 
   <dependencies>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-actuator</artifactId>
-    </dependency>
+    <!-- Core Spring Dependencies -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
     </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-devtools</artifactId>
       <scope>runtime</scope>
       <optional>true</optional>
     </dependency>
+
     <dependency>
       <groupId>io.micrometer</groupId>
       <artifactId>micrometer-registry-prometheus</artifactId>
       <scope>runtime</scope>
     </dependency>
+
+    <!-- Test support -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
@@ -52,13 +58,14 @@
 
   <build>
     <plugins>
-      <!-- Spring Boot Plugin with AOT and Repackage -->
+
+      <!-- ✅ Spring Boot Plugin with AOT -->
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
-          <mainClass>com.example.demo.DemoApplication</mainClass> <!-- ✅ important -->
           <aot>true</aot>
+          <mainClass>${start-class}</mainClass>
         </configuration>
         <executions>
           <execution>
@@ -69,7 +76,7 @@
         </executions>
       </plugin>
 
-      <!-- GraalVM Native Image Plugin -->
+      <!-- ✅ GraalVM Native Plugin -->
       <plugin>
         <groupId>org.graalvm.buildtools</groupId>
         <artifactId>native-maven-plugin</artifactId>
@@ -82,12 +89,19 @@
           </execution>
         </executions>
       </plugin>
+
     </plugins>
   </build>
 
   <profiles>
     <profile>
       <id>native</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <springAot>true</springAot>
+      </properties>
       <build>
         <plugins>
           <plugin>
