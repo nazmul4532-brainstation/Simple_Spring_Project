@@ -59,7 +59,7 @@
   <build>
     <plugins>
 
-      <!-- ✅ Spring Boot Plugin with AOT -->
+      <!-- ✅ Spring Boot Plugin with AOT and Start-Class in Manifest -->
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
@@ -76,7 +76,7 @@
         </executions>
       </plugin>
 
-      <!-- ✅ GraalVM Native Plugin -->
+      <!-- ✅ GraalVM Native Image Plugin -->
       <plugin>
         <groupId>org.graalvm.buildtools</groupId>
         <artifactId>native-maven-plugin</artifactId>
@@ -96,12 +96,6 @@
   <profiles>
     <profile>
       <id>native</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <properties>
-        <springAot>true</springAot>
-      </properties>
       <build>
         <plugins>
           <plugin>
