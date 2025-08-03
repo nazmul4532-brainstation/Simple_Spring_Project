@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: spring-graal-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce  
+  resources:
+    requests:
+      storage: 1Gi  
+  storageClassName: openebs-hostpath
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-graal
+  labels:
+    app: spring-graal
+spec:
+  selector:
+    matchLabels:
+      app: spring-graal
+  template:
+    metadata:
+      labels:
+        app: spring-graal
+      annotations:                  
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"   
+        prometheus.io/path: "/actuator/prometheus" 
+    spec:
+      containers:
+        - name: spring-graal
+          image: nazmul4532brainstation/springboot-graal:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          volumeMounts: 
+            - mountPath: /data  
+              name: spring-graal-storage  
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: "spring-graal"
+            - name: OTEL_TRACES_SAMPLER
+              value: "always_on"
+            - name: OTEL_TRACES_EXPORTER
+              value: "otlp"
+            - name: OTEL_METRICS_EXPORTER
+              value: "otlp"
+            - name: OTEL_LOGS_EXPORTER
+              value: "otlp"
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "grpc"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://opentelemetry-collector-collector.opentelemetry.svc.cluster.local:4317"
+      volumes:  
+        - name: spring-graal-storage
+          persistentVolumeClaim:
+            claimName: spring-graal-pvc 
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spring-graal
+  labels:
+    app: spring-graal
+  annotations:                    
+    prometheus.io/discover: "true" 
+    prometheus.io/path: "/actuator/prometheus"
+    prometheus.io/port: "8080"   
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: spring-graal
