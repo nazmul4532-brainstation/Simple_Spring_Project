@@ -100,9 +100,9 @@
   <profiles>
     <profile>
       <id>native</id>
-        <properties>
+      <properties>
           <!-- Enables AOT processing -->
-          <springAot>true</springAot>
+        <springAot>true</springAot>
       </properties>
       <build>
         <plugins>
